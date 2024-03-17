@@ -1,6 +1,6 @@
-// C++ program for Shannon Fano Algorithm
+// Created: 14th March 2024 09:50 PM
+// By: Uttam
 
-// include header files
 #include <bits/stdc++.h>
 using namespace std;
 
