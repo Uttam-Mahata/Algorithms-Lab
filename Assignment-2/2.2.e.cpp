@@ -1,151 +1,160 @@
 #include <iostream>
 #include <fstream>
-#include <queue>
+#include <string>
 #include <unordered_map>
-#include <vector>
+#include <queue>
 
 using namespace std;
 
-// Node structure for the Huffman tree
+// Node structure for Huffman tree
 struct Node {
     char data;
     int freq;
-    Node* left;
-    Node* right;
+    Node *left, *right;
 
     Node(char data, int freq) : data(data), freq(freq), left(nullptr), right(nullptr) {}
 };
 
-// Comparison function for priority queue
+// Comparator for priority queue
 struct CompareNodes {
-    bool operator()(Node* left, Node* right) const {
-        return left->freq > right->freq;
+    bool operator()(Node* const& n1, Node* const& n2) {
+        return n1->freq > n2->freq;
     }
 };
 
-// Function to build Huffman tree
+// Function to generate Huffman tree
 Node* buildHuffmanTree(const unordered_map<char, int>& freqMap) {
-    priority_queue<Node*, vector<Node*>, CompareNodes> minHeap;
+    priority_queue<Node*, vector<Node*>, CompareNodes> pq;
 
-    // Create a leaf node for each character and add it to the minHeap
-    for (auto& pair : freqMap) {
-        Node* newNode = new Node(pair.first, pair.second);
-        minHeap.push(newNode);
+    for (auto& entry : freqMap) {
+        pq.push(new Node(entry.first, entry.second));
     }
 
-    // Build the Huffman tree
-    while (minHeap.size() > 1) {
-        Node* left = minHeap.top();
-        minHeap.pop();
-        Node* right = minHeap.top();
-        minHeap.pop();
+    while (pq.size() > 1) {
+        Node* left = pq.top(); pq.pop();
+        Node* right = pq.top(); pq.pop();
 
-        Node* parent = new Node('$', left->freq + right->freq);
-        parent->left = left;
-        parent->right = right;
-        minHeap.push(parent);
+        Node* combined = new Node('$', left->freq + right->freq);
+        combined->left = left;
+        combined->right = right;
+        pq.push(combined);
     }
 
-    // Return the root of the Huffman tree
-    return minHeap.top();
+    return pq.top();
 }
 
-// Function to generate Huffman codes
-void generateHuffmanCodes(Node* root, const string& code, unordered_map<char, string>& huffmanCodes) {
-    if (!root)
-        return;
+// Recursive function to generate Huffman codes and save tree details
+void generateCodesAndSaveDetails(Node* root, string code, unordered_map<char, string>& codes, ofstream& file) {
+    if (!root) return;
 
     if (root->data != '$') {
-        huffmanCodes[root->data] = code;
+        file << root->data << ":" << root->freq << ":" << code << endl;
+        codes[root->data] = code;
     }
 
-    generateHuffmanCodes(root->left, code + "0", huffmanCodes);
-    generateHuffmanCodes(root->right, code + "1", huffmanCodes);
+    generateCodesAndSaveDetails(root->left, code + "0", codes, file);
+    generateCodesAndSaveDetails(root->right, code + "1", codes, file);
 }
 
-// Function to compress text using Huffman codes
-string compressText(const string& text, const unordered_map<char, string>& huffmanCodes) {
-    string compressedText;
-    for (char ch : text) {
-        if (huffmanCodes.find(ch) != huffmanCodes.end()) {
-            compressedText += huffmanCodes.at(ch);
-        } else {
-            cerr << "Huffman code not found for character: " << ch << endl;
-            // Handle error or continue without compressing this character
-        }
+// Function to encode text using Huffman codes
+string encodeText(const string& text, const unordered_map<char, string>& codes) {
+    string encoded = "";
+    for (char c : text) {
+        encoded += codes.at(c);
     }
-    return compressedText;
+    return encoded;
 }
 
-// Function to calculate compression ratio
-double calculateCompressionRatio(int originalSize, int compressedSize) {
-    return static_cast<double>(originalSize) / compressedSize;
+// Function to calculate average code length
+double calculateAverageCodeLength(const string& text, const unordered_map<char, string>& codes) {
+    double totalBits = 0;
+    for (char c : text) {
+        totalBits += codes.at(c).length();
+    }
+    return totalBits / text.length();
 }
 
 int main() {
-    // Read and concatenate all known documents into a single large document
-    string combinedDocument;
-    ifstream knownFile("document.txt");
-    if (knownFile.is_open()) {
-        string line;
-        while (getline(knownFile, line)) {
-            combinedDocument += line;
-        }
-        knownFile.close();
+    // File paths
+    string knownDocument1Path = "student1_answer.txt";
+    string knownDocument2Path = "student2_answer.txt";
+    string unknownDocumentPath = "student3_answer.txt";
+    string huffmanTreeFile = "huffman_tree.txt";
+
+    // Read known documents
+    string knownDocument1, knownDocument2, unknownDocument;
+    ifstream file;
+
+    // Read known document 1
+    file.open(knownDocument1Path);
+    if (file.is_open()) {
+        getline(file, knownDocument1);
+        file.close();
     } else {
-        cerr << "Unable to open file known_document.txt" << endl;
+        cerr << "Error: Unable to open known document 1 file." << endl;
         return 1;
     }
 
-    // Calculate frequency of each character in the combined document
+    // Read known document 2
+    file.open(knownDocument2Path);
+    if (file.is_open()) {
+        getline(file, knownDocument2);
+        file.close();
+    } else {
+        cerr << "Error: Unable to open known document 2 file." << endl;
+        return 1;
+    }
+
+    // Read unknown document
+    file.open(unknownDocumentPath);
+    if (file.is_open()) {
+        getline(file, unknownDocument);
+        file.close();
+    } else {
+        cerr << "Error: Unable to open unknown document file." << endl;
+        return 1;
+    }
+
+    // Calculate frequencies
     unordered_map<char, int> freqMap;
-    for (char ch : combinedDocument) {
-        freqMap[ch]++;
+    for (char c : knownDocument1 + knownDocument2 + unknownDocument) {
+        freqMap[c]++;
     }
 
     // Build Huffman tree
     Node* root = buildHuffmanTree(freqMap);
 
-    // Generate Huffman codes
-    unordered_map<char, string> huffmanCodes;
-    generateHuffmanCodes(root, "", huffmanCodes);
+    // Generate Huffman codes and save tree details to file
+    ofstream huffmanTreeFileStream(huffmanTreeFile);
+    if (huffmanTreeFileStream.is_open()) {
+        unordered_map<char, string> codes;
+        generateCodesAndSaveDetails(root, "", codes, huffmanTreeFileStream);
+        huffmanTreeFileStream.close();
 
-    // Read the unknown document
-    string unknownDocument;
-    ifstream unknownFile("unknown_document.txt");
-    if (unknownFile.is_open()) {
-        string line;
-        while (getline(unknownFile, line)) {
-            unknownDocument += line;
+        // Calculate average code lengths
+        double avgCodeLenDoc1 = calculateAverageCodeLength(knownDocument1, codes);
+        double avgCodeLenDoc2 = calculateAverageCodeLength(knownDocument2, codes);
+        double avgCodeLenUnknown = calculateAverageCodeLength(unknownDocument, codes);
+
+        // Display results
+        cout << "Average Code Length for Known Document 1: " << avgCodeLenDoc1 << endl;
+        cout << "Average Code Length for Known Document 2: " << avgCodeLenDoc2 << endl;
+        cout << "Average Code Length for Unknown Document: " << avgCodeLenUnknown << endl;
+
+        // Check for optimality loss
+        if (avgCodeLenUnknown > avgCodeLenDoc1 && avgCodeLenUnknown > avgCodeLenDoc2) {
+            cout << "Optimality Loss: The average code length for the unknown document is longer than that of the known documents." << endl;
+        } else {
+            cout << "No Optimality Loss: The average code length for the unknown document is not longer than that of the known documents." << endl;
         }
-        unknownFile.close();
     } else {
-        cerr << "Unable to open file unknown_document.txt" << endl;
+        cerr << "Error: Unable to open file to save Huffman tree details." << endl;
         return 1;
     }
-
-    // Compress the unknown document using Huffman codes
-    string compressedUnknownDocument = compressText(unknownDocument, huffmanCodes);
-
-    // Save the compressed unknown document to file
-    ofstream compressedUnknownFile("compressed_unknown_document.txt");
-    if (compressedUnknownFile.is_open()) {
-        compressedUnknownFile << compressedUnknownDocument;
-        compressedUnknownFile.close();
-    } else {
-        cerr << "Unable to open file compressed_unknown_document.txt" << endl;
-        return 1;
-    }
-
-    // Calculate compression ratio
-    int originalSize = unknownDocument.size() * 8; // Assuming 8 bits per character
-    int compressedSize = compressedUnknownDocument.size();
-    double compressionRatio = calculateCompressionRatio(originalSize, compressedSize);
-
-    // Output compression ratio
-    cout << "Compression Ratio: " << compressionRatio << endl;
-
-    cout << "Compression process completed successfully." << endl;
+   
 
     return 0;
+    
+
+
 }
