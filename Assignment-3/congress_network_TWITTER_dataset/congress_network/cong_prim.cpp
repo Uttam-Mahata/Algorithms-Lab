@@ -98,7 +98,7 @@ public:
     }
 
     void saveConnectedComponents(const vector<unordered_set<int>>& components) {
-        ofstream outfile("connected_components.txt");
+        ofstream outfile("connected_components_prim.txt");
         if (outfile.is_open()) {
             for (const auto& component : components) {
                 for (int node : component) {
@@ -151,21 +151,6 @@ int main() {
 
     cout << "\nMinimum Spanning Tree:" << endl;
     graph.minimumSpanningTree();
-
-    // Save mst data in such a way such that I can draw the graph in python
-    // and visualize the mst
-    ofstream outfile("mst_data.txt");
-    if (outfile.is_open()) {
-        for (const auto& kvp : graph.adjList) {
-            for (const auto& neighbor : kvp.second) {
-                outfile << kvp.first << " " << neighbor.first << "\n";
-            }
-        }
-        outfile.close();
-        cout << "MST data saved to mst_data.txt\n";
-    } else {
-        cout << "Unable to save MST data to file\n";
-    }
     
 
 

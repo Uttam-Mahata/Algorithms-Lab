@@ -1,12 +1,11 @@
-from matplotlib import pyplot as plt
 import networkx as nx
+import matplotlib.pyplot as plt
 
 G = nx.Graph()
-with open('mst_data.txt', 'r') as f:
-        for line in f:
-            src, dest = map(int, line.strip().split())
-            G.add_edge(src, dest)
+with open('minimum_spanning_tree_prim.txt') as f:
+     for line in f:
+         u, v = map(int, line.strip().split(' - '))
+         G.add_edge(u, v)
 
-pos = nx.spring_layout(G)
-nx.draw(G, pos, with_labels=True, node_size=700, node_color='skyblue', font_size=20, font_weight='bold', edge_color='gray', width=2, edge_cmap=plt.cm.Blues)
-plt.show();
+nx.draw(G, with_labels=True, node_size=1000, node_color='skyblue', font_size=10, font_weight='bold')
+plt.show()
